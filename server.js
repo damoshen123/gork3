@@ -697,7 +697,7 @@ async function injectFetchInterceptor(page) {
     };
     
     // 处理事件数据
-    function processEventData(line) {
+    async function processEventData(line) {
       // 检查是否为 SSE 数据行
        // const data = line.substring(6); // 移除 'data: ' 前缀
         try {
@@ -716,7 +716,7 @@ async function injectFetchInterceptor(page) {
           console.log('处理事件数据类型:', jsonData);
           
           // 检查是否为结束信号
-          if (false) {
+          if (jsonData.hasOwnProperty("result")&&jsonData.result.hasOwnProperty("isSoftStop")) {
             console.log('检测到流结束信号');
             
             // 触发流结束事件
@@ -770,11 +770,19 @@ async function injectFetchInterceptor(page) {
   });
 
   // 处理流结束事件
-  await page.exposeFunction('handleStreamEnd', () => {
-    console.log('流数据传输结束');
+  await page.exposeFunction('handleStreamEnd', async () => {
     
+
     // 处理流结束
     if (typeof resssss !== 'undefined') {
+      if(!isstream){
+        let response=await createChatCompletion(reqmessage);
+
+        console.log("response",response);
+
+        resssss.write(JSON.stringify(response));
+      }
+      console.log('流数据传输结束');
       resssss.end();
     }
   }).catch(e => {
@@ -966,7 +974,7 @@ async function sendMessage(res3, message) {
     console.log("sessionCookie",sessionCookie);
 
     await context.addCookies(sessionCookie);
-
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
 
 //新建聊天
@@ -1534,6 +1542,7 @@ server.listen(config.port, '0.0.0.0', () => {
 });
 function createChatCompletion(content){
     const completionTokens = content.length;
+    console.log("content",content);
     
     return {
         id: generateId(),
