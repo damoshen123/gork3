@@ -980,15 +980,9 @@ async function sendMessage(res3, message) {
     console.log("sessionCookie",sessionCookie);
 
     await context.addCookies(sessionCookie);
-    if(config.refresh){
-      await page.reload();
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }else{
-      await new Promise(resolve => setTimeout(resolve, 2000));
-    }
 
-    
 
+  
 
 //新建聊天
 try {
@@ -1058,7 +1052,12 @@ try {
 
 //新建聊天
 
-
+if(config.refresh){
+  await page.reload();
+  await new Promise(resolve => setTimeout(resolve, 1000));
+}else{
+  await new Promise(resolve => setTimeout(resolve, 2000));
+}
 
 try {
     message = message.messages;
