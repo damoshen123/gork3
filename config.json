@@ -5,6 +5,8 @@
     "channel": "chromium",
     "channel注释":"支持chromium、msedge、chrome",
     "wutou":false,
-    "tohuman":false
+    "tohuman":false,
+    "refresh":true,
+    "Prompt":"阅读并遵守文档内容！"
   }
   

@@ -16,6 +16,7 @@ import crypto from 'crypto';
 import { chromium } from '@playwright/test';
 import { Readable } from 'stream';
 import { createServer } from 'http';
+import multer from 'multer';
 //版本号
 const banbenhao = "1.4";
 
@@ -147,6 +148,26 @@ const __dirname = path.dirname(__filename);
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+
+
+
+// 配置 multer 用于处理文件上传
+const storage = multer.memoryStorage(); // 将文件存储在内存中
+const upload = multer({
+    storage: storage,
+    limits: {
+        fileSize: 10 * 1024 * 1024 // 限制文件大小为5MB
+    },
+    fileFilter: (req, file, cb) => {
+        // 只接受图片文件
+        if (file.mimetype.startsWith('image/')) {
+            cb(null, true);
+        } else {
+            cb(new Error('只支持图片文件'));
+        }
+    }
+});
 
 let browser = null;
 let page = null;
@@ -844,7 +865,8 @@ process.on('SIGINT', async () => {
 });
 
 const availableModels = [
-    { id: "从网页选择默认GROK", name: "从网页选择默认GROK" },
+    { id: "默认GROK输入框", name: "默认GROK输入框" },
+    { id: "grok-3-文件模式", name: "grok-3-文件模式" }
 ];
 
 let Upload=false;
@@ -854,7 +876,6 @@ app.post('/v1/chat/completions', async (req, res) => {
     reqmessage="";
     One=true;
     resssss = res;
-    
     Aborted = false;
 
     res.on('close', async () => {
@@ -878,7 +899,7 @@ app.post('/v1/chat/completions', async (req, res) => {
 
     let body=req.body
     //是否采用上传模式
-    if(req.body.model=="gork-3-上传"){
+    if(req.body.model=="grok-3-文件模式"){
 
       Upload=true;
 
@@ -886,6 +907,8 @@ app.post('/v1/chat/completions', async (req, res) => {
 
       Upload=false;
     }
+
+    console.log("body",body);
 
 
   
@@ -974,7 +997,14 @@ async function sendMessage(res3, message) {
     console.log("sessionCookie",sessionCookie);
 
     await context.addCookies(sessionCookie);
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    if(config.refresh){
+      await page.reload();
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }else{
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+
+    
 
 
 //新建聊天
