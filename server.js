@@ -16,7 +16,6 @@ import crypto from 'crypto';
 import { chromium } from '@playwright/test';
 import { Readable } from 'stream';
 import { createServer } from 'http';
-import multer from 'multer';
 //版本号
 const banbenhao = "1.4";
 
@@ -152,22 +151,7 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 
 
-// 配置 multer 用于处理文件上传
-const storage = multer.memoryStorage(); // 将文件存储在内存中
-const upload = multer({
-    storage: storage,
-    limits: {
-        fileSize: 10 * 1024 * 1024 // 限制文件大小为5MB
-    },
-    fileFilter: (req, file, cb) => {
-        // 只接受图片文件
-        if (file.mimetype.startsWith('image/')) {
-            cb(null, true);
-        } else {
-            cb(new Error('只支持图片文件'));
-        }
-    }
-});
+
 
 let browser = null;
 let page = null;
@@ -908,7 +892,6 @@ app.post('/v1/chat/completions', async (req, res) => {
       Upload=false;
     }
 
-    console.log("body",body);
 
 
   
