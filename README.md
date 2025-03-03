@@ -35,6 +35,7 @@ pinned: false
 ```bash
 docker build -t genspark-proxy .
 docker run -p 3333:3333 genspark-proxy
+```
 投喂咖啡
 如果对你有帮助，感谢投喂咖啡  
 https://afdian.com/a/cqgnyy
