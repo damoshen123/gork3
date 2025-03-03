@@ -1663,7 +1663,7 @@ async function processStreamData(message) {
                  // console.log(isstream)
                   reqmessage += text;
                   resssss.flushHeaders();
-                  resssss.write(`data: ${JSON.stringify(response).replace("\\n", "\\n ")}\n\n`);
+                  resssss.write(`data: ${JSON.stringify(response)}\n\n`);
                   resssss.flushHeaders();
               } else {
                   reqmessage += text;
