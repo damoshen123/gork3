@@ -165,6 +165,9 @@ let nowcount=0;
 let nowfilename="";
 let One=true;
 let cookiesCount=0;
+
+// 存储cookie状态的Map
+let cookieStatusMap = new Map();
 // Worker 的基础 URL
 // const baseUrl = 'https://tongji2.damoshen2.workers.dev';
 
@@ -190,123 +193,109 @@ process.on('uncaughtException', (error) => {
 function updateCookiesJson(key, value) {
     // 修改内存中的对象
     console.log(key,cookiesjson[key]);
-    cookiesjson[key].count= value;
+    cookiesjson[key].count = value;
+    
+    // 如果更新失败，标记该cookie为无效
+    if (value === 0) {
+        cookieStatusMap.set(key, false);
+        console.log(`Cookie ${key} 已标记为无效`);
+    }
   
     // 写入文件
     fs.writeFileSync(
-      path.join(__dirname, 'cookies.json'), 
-      JSON.stringify(cookiesjson, null, 2)
+        path.join(__dirname, 'cookies.json'), 
+        JSON.stringify(cookiesjson, null, 2)
     );
-  }
+}
 
 
 
 function processFileContents(fileContents, cookiesjson) {
-
-    let cookieNowCount=0;
-    console.log(`cookiesCount：：：111`,cookiesCount);
-
-    console.log(`cookiesjsonaaaaaaaaaaaaaaaaaaaa`,fileContents.length);
-
-    if(cookiesCount >= (fileContents.length)){
-      cookiesCount=0;
+    // 初始化cookie状态（如果尚未初始化）
+    if (cookieStatusMap.size === 0) {
+        for (const [fileName] of Object.entries(fileContents)) {
+            cookieStatusMap.set(fileName, true);
+        }
     }
-    console.log(`cookiesCount：：：`,cookiesCount);
-    // 获取当前时间戳（秒）
+
+    // 检查是否所有cookie都失效
+    let allInvalid = true;
+    for (const isValid of cookieStatusMap.values()) {
+        if (isValid) {
+            allInvalid = false;
+            break;
+        }
+    }
+
+    // 如果所有cookie都失效，重置所有状态
+    if (allInvalid) {
+        console.log('所有cookie已失效，重置状态');
+        for (const [fileName] of Object.entries(fileContents)) {
+            cookieStatusMap.set(fileName, true);
+        }
+        cookiesCount = 0; // 重置计数器
+    }
+
+    if(cookiesCount >= fileContents.length) {
+        cookiesCount = 0;
+    }
+
+    // 查找下一个有效的cookie
+    let originalCount = cookiesCount;
+    let validCookie = null;
     const currentTimestamp = Math.floor(Date.now() / 1000);
-    // 遍历 fileContents 中的文件
-    for (const [fileName, content] of Object.entries(fileContents)) {
-      // 检查 cookiesjson 中是否存在该文件的记录
-      if (!cookiesjson[content.fileName]) {
-        console.log(`filename`,content.fileName);
-        console.log(`content`,content);
-        // 如果不存在，创建新记录
-        cookiesjson[content.fileName] = {
-          timestamp: currentTimestamp,
-          count: 0
-        };
+    
+    do {
+        const entries = Object.entries(fileContents);
+        const currentEntry = entries[cookiesCount];
         
-        // 写入 cookiesjson 文件
-        fs.writeFileSync(
-          path.join(__dirname, 'cookies.json'), 
-          JSON.stringify(cookiesjson, null, 2)
-        );
-  
-        // 返回文件内容
-        nowfilename=content.fileName;
-        nowcount=0;
-        if(cookieNowCount >= cookiesCount){
-          cookiesCount=cookiesCount+1;
-          console.log(`cookiesCount`,cookiesCount);
-        return content;
-      }
-
-      } else {
-        // 如果存在记录，检查使用次数和时间
-        const fileRecord = cookiesjson[content.fileName];
-        console.log(`fileRecord`,fileRecord);
-        const timeDiff = currentTimestamp - fileRecord.timestamp;
-  
-        // 如果使用次数小于3，直接返回内容
-        if (fileRecord.count < config.Hours24||config.pro) {
-          
-          nowcount=fileRecord.count;
-          // 写入 cookiesjson 文件
-        //   fs.writeFileSync(
-        //     path.join(__dirname, 'cookiesjson.json'),
-        //     JSON.stringify(cookiesjson, null, 2)
-        //   );
-          nowfilename=content.fileName;
-          if(cookieNowCount >= cookiesCount){
-            cookiesCount=cookiesCount+1;
-            console.log(`cookiesCount`,cookiesCount);
-            const time11 = currentTimestamp - fileRecord.timestamp;
-
-            console.log(`currentTimestamp`,currentTimestamp);
-            console.log("fileRecord.timestamp",fileRecord.timestamp);
-
-            console.log(`time11`,time11);
-            if(time11 > 7200){
-              fileRecord.count = 0;
-              fileRecord.timestamp = currentTimestamp;
-              updateCookiesJson(nowfilename,0);
+        if (currentEntry && cookieStatusMap.get(currentEntry[0])) {
+            const [fileName, content] = currentEntry;
+            
+            // 检查cookie是否存在于cookiesjson中
+            if (!cookiesjson[content.fileName]) {
+                cookiesjson[content.fileName] = {
+                    timestamp: currentTimestamp,
+                    count: 0
+                };
+                validCookie = content;
+                nowfilename = content.fileName;
+                nowcount = 0;
+                break;
+            } else {
+                const fileRecord = cookiesjson[content.fileName];
+                const timeDiff = currentTimestamp - fileRecord.timestamp;
+                
+                // 检查使用次数和时间限制
+                if (fileRecord.count < config.Hours24 || config.pro) {
+                    if (timeDiff > 7200) {
+                        fileRecord.count = 0;
+                        fileRecord.timestamp = currentTimestamp;
+                        updateCookiesJson(content.fileName, 0);
+                    }
+                    validCookie = content;
+                    nowfilename = content.fileName;
+                    nowcount = fileRecord.count;
+                    break;
+                } else if (timeDiff > 7200) {
+                    fileRecord.count = 0;
+                    fileRecord.timestamp = currentTimestamp;
+                    validCookie = content;
+                    nowfilename = content.fileName;
+                    nowcount = 0;
+                    break;
+                }
             }
-            return content;
-          }
         }
-        // 如果使用次数大于等于3，检查时间
-        else {
-          // 如果时间小于24小时（86400秒）
-          if (timeDiff > 7200) {
-            // 重置次数为0
-            fileRecord.count = 0;
-            fileRecord.timestamp = currentTimestamp;
-            // 写入 cookiesjson 文件
-            fs.writeFileSync(
-              path.join(__dirname, 'cookies.json'),
-              JSON.stringify(cookiesjson, null, 2)
-            );
-            nowcount=fileRecord.count;
-            nowfilename=content.fileName;
-            if(cookieNowCount >= cookiesCount){
-              cookiesCount=cookiesCount+1;
-              console.log(`cookiesCount`,cookiesCount);
-              const time11 = currentTimestamp - fileRecord.timestamp;
-              console.log(`time11`,time11);
-              if(time11 > 7200){
-                updateCookiesJson(nowfilename,0);
-              }
-              return content;
-            }
+        
+        cookiesCount = (cookiesCount + 1) % entries.length;
+    } while (cookiesCount !== originalCount);
 
-          }
-        }
-        cookieNowCount=cookieNowCount+1;
-      }
+    if (validCookie) {
+        cookiesCount = (cookiesCount + 1) % Object.entries(fileContents).length;
     }
-  
-    // 如果没有找到可用的文件，返回 null
-    return null;
+
+    return validCookie;
 }
 
   
