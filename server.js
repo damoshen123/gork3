@@ -616,6 +616,7 @@ async function injectFetchInterceptor(page) {
       if (resource.href.includes('/2/grok/add_response.json') && 
           config && config.method === 'POST') {
         console.log('拦截到 fetch 请求:', resource);
+        console.log('拦截到 fetch 请求:', config.body);
         
         try {
           // 调用原始 fetch 并获取响应
@@ -623,7 +624,13 @@ async function injectFetchInterceptor(page) {
                     // 为此请求创建 AbortController
                     const controller = new AbortController();
                     window._activeFetchController = controller;
+                    let cog = JSON.parse(config.body);
+
+                    cog.returnSearchResults=false;
+
+                    config.body=JSON.stringify(cog);
                   // 将 signal 添加到请求配置中
+                  console.log('修改后 fetch 请求:', config.body);
                   const newConfig = {
                     ...config,
                     signal: controller.signal
@@ -850,7 +857,7 @@ process.on('SIGINT', async () => {
 
 const availableModels = [
     { id: "默认GROK输入框", name: "默认GROK输入框" },
-    { id: "grok-3-文件模式", name: "grok-3-文件模式" }
+   // { id: "grok-3-文件模式", name: "grok-3-文件模式" }
 ];
 
 let Upload=false;
